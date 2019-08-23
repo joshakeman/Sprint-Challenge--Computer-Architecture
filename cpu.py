@@ -10,7 +10,7 @@ class CPU:
         self.ram = [0] * 256
         self.reg = [0] * 8
         self.pc = 0
-        self.fl = 0b00000000
+        self.fl = [0] * 8
 
     def load(self, filename):
         """Load a program into memory."""
@@ -56,19 +56,18 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
 
         elif op == "CMP":
+            
             if self.reg[reg_a] < self.reg[reg_b]:
-                self.fl = 0b00000100
+                self.fl[-3] = 1
             elif self.reg[reg_a] > self.reg[reg_b]:
-                self.fl = 0b00000010
-            elif self.reg[reg_a] > self.reg[reg_b]:
-                self.fl = 0b00000001
-        elif op == "CMP":
-
+                self.fl[-2] = 1
+            elif self.reg[reg_a] == self.reg[reg_b]:
+                self.fl[-1] = 1
 
         else:
             raise Exception("Unsupported ALU operation")
@@ -99,6 +98,10 @@ class CPU:
         PRN = 0b01000111
         HLT = 0b00000001
         MUL = 0b10100010
+        CMP = 0b10100111
+        JMP = 0b01010100
+        JEQ = 0b01010101
+        JNE = 0b01010110
 
         running = True
 
@@ -128,9 +131,29 @@ class CPU:
                 self.alu("MUL", reg_a, reg_b)
                 self.pc += 3
             
+            elif command == CMP:
+                reg_a = self.ram_read(self.pc + 1)
+                reg_b = self.ram_read(self.pc + 2)
+                self.alu("CMP", reg_a, reg_b)
+                self.pc += 3
+            
             elif command == JMP:
-                register = self.ram_read(self.pc + 1)
+                register = self.reg[self.ram_read(self.pc + 1)]
                 self.pc = register
+            
+            elif command == JEQ:
+                register = self.reg[self.ram_read(self.pc + 1)]
+                if self.fl[-1] == 1:
+                    self.pc = register
+                else:
+                    self.pc += 2
+
+            elif command == JNE:
+                register = self.reg[self.ram_read(self.pc + 1)]
+                if self.fl[-1] == 0:
+                    self.pc = register
+                else:
+                    self.pc += 2
 
             elif command == HLT:
                 running = False
